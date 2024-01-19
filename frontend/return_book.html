@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loan Book</title>
+    <title>Return Book</title>
     <!-- Bootstrap CSS -->
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -11,13 +11,12 @@
     <div class="container mt-5">
         <h2>Return a Book</h2>
         <form id="returnBookForm">
+            <!-- Display a dropdown menu for selecting a book to return -->
             <div class="form-group">
-                <label for="customer_name_return">Customer Name:</label>
-                <input type="text" class="form-control" id="customer_name_return" name="customer_name_return" required>
-            </div>
-            <div class="form-group">
-                <label for="book_name_return">Book Name:</label>
-                <input type="text" class="form-control" id="book_name_return" name="book_name_return" required>
+                <label for="book_id_return">Select a Book:</label>
+                <select class="form-control" id="book_id_return" name="book_id_return" required>
+                    <!-- Options will be dynamically populated with book data -->
+                </select>
             </div>
             <button type="button" class="btn btn-primary" onclick="returnBook()">Return Book</button>
         </form>
@@ -35,35 +34,62 @@
         // Check if the user is logged in
         const accessToken = sessionStorage.getItem('access_token');
         if (accessToken) {
-            console.log('Access Token:', accessToken);  // Add this line
+            console.log('Access Token:', accessToken);
             document.getElementById('returnBookForm').style.display = 'block';
+
+            // Fetch the list of all books and populate the dropdown
+            axios.get('http://localhost:5000/all_books', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            })
+            .then(response => {
+                const books = response.data.books;
+                const bookDropdown = document.getElementById('book_id_return');
+
+                books.forEach(book => {
+                    const option = document.createElement('option');
+                    option.value = book.id;
+                    option.text = book.name;
+                    bookDropdown.add(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching books:', error);
+            });
         }
 
-
-    function returnBook() {
-        const accessToken = sessionStorage.getItem('access_token');
-        if (!accessToken) {
-            alert('Please log in to return a book.');
-                // You can redirect the user to the login page here if needed
-            return;
-        }
-        
-        const form = document.getElementById('returnBookForm');
-        const formData = new FormData(form);
-        
-        axios.post('http://localhost:5000/return_book', Object.fromEntries(formData), {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
+        // Function to return a book
+        function returnBook() {
+            const accessToken = sessionStorage.getItem('access_token');
+            if (!accessToken) {
+                alert('Please log in to return a book.');
+                return;
             }
-        })
-        .then(response => {
-            alert(response.data.message);
-        })
-        .catch(error => {
-            console.error('Error returning book:', error);
-        });
-    }
-        
+
+            // Get the selected book ID from the dropdown
+            const bookId = document.getElementById('book_id_return').value;
+
+            // Log selected book ID for debugging
+            console.log('Selected Book ID:', bookId);
+
+            // Create data object
+            const data = new FormData();
+            data.append('book_id_return', bookId);
+
+            // Make a POST request to return_book endpoint
+            axios.post('http://localhost:5000/return_book', data, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                })
+                .then(response => {
+                    alert(response.data.message);
+                })
+                .catch(error => {
+                    console.error('Error returning book:', error);
+                });
+        }
     </script>
 </body>
 </html>

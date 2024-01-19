@@ -14,7 +14,7 @@
         <h2>Main Page</h2>
         <div id="welcomeMessage" style="display: none;">
             <!-- Display welcome message here -->
-            <p id="welcomeText"></p>
+            <p>Welcome, <span id="customerName"></span>! You are logged in.</p>
         </div>
 
         <!-- Action Cards -->
@@ -125,30 +125,11 @@
         <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
         <script>
-        // Check if the user is logged in
-        
             // Check if the user is logged in
-// Check if the user is logged in
-// Check if the user is logged in
-    const accessToken = sessionStorage.getItem('access_token');
-
-    if (accessToken) {
-        axios.get('http://localhost:5000/protected', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
+            const accessToken = sessionStorage.getItem('access_token');
+            if (accessToken) {
+                document.getElementById('welcomeMessage').style.display = 'block';
             }
-        })
-        .then(response => {
-            const customerName = response.data.username || sessionStorage.getItem('customer_name') || 'Guest';
-            document.getElementById('welcomeText').textContent = `Welcome, ${customerName}! You are logged in.`;
-            document.getElementById('welcomeMessage').style.display = 'block';
-        })
-        .catch(error => {
-            console.error('Error getting user information:', error);
-        });
-    }
-
-
         
             // Function to add a book
             function addBook() {

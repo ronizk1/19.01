@@ -83,12 +83,21 @@
             const form = document.getElementById('loginForm');
             const formData = new FormData(form);
     
-            axios.post('http://localhost:5000/login', Object.fromEntries(formData))
+            // Make a POST request to the login endpoint
+            axios.post('http://localhost:5000/login', formData)
                 .then(response => {
-                    const { access_token, username, customer_name } = response.data;
+                    const { access_token, user_id, username } = response.data;
+    
+                    // Store the access token in session storage
                     sessionStorage.setItem('access_token', access_token);
-                    sessionStorage.setItem('customer_name', customer_name);
-                    window.location.href = 'main_page.html';
+                    sessionStorage.setItem('customer_name', response.data.customer_name);
+
+    
+                    // Display welcome message
+                    document.getElementById('welcomeMessage').innerHTML = `Welcome, ${username}!`;
+                    document.getElementById('welcomeMessage').style.display = 'block';
+    
+                    
                 })
                 .catch(error => {
                     console.error('Error logging in:', error);

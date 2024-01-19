@@ -19,13 +19,12 @@
 
         <!-- Loan Book Form -->
         <form id="loanBookForm" style="display: none;">
+            <!-- Display a dropdown menu for selecting a book -->
             <div class="form-group">
-                <label for="customer_name">Customer Name:</label>
-                <input type="text" class="form-control" id="customer_name" name="customer_name" required>
-            </div>
-            <div class="form-group">
-                <label for="book_name">Book Name:</label>
-                <input type="text" class="form-control" id="book_name" name="book_name" required>
+                <label for="book_id">Select a Book:</label>
+                <select class="form-control" id="book_id" name="book_id" required>
+                    <!-- Options will be dynamically populated with book data -->
+                </select>
             </div>
             <button type="button" class="btn btn-primary" onclick="loanBook()">Loan Book</button>
         </form>
@@ -43,54 +42,66 @@
         // Check if the user is logged in
         const accessToken = sessionStorage.getItem('access_token');
         if (accessToken) {
-            console.log('Access Token:', accessToken);  // Add this line
+            console.log('Access Token:', accessToken);
             document.getElementById('welcomeMessage').style.display = 'block';
             document.getElementById('loanBookForm').style.display = 'block';
-        }
 
-        // Function to loan a book
-// Function to loan a book
-    function loanBook() {
-        // Check if the user is logged in
-        const accessToken = sessionStorage.getItem('access_token');
-        if (!accessToken) {
-            alert('Please log in to loan a book.');
-            // You can redirect the user to the login page here if needed
-            return;
-        }
-
-        // Get form data
-        const customer_name = document.getElementById('customer_name').value;
-        const book_name = document.getElementById('book_name').value;
-
-        // Log form data for debugging
-        console.log('Customer Name:', customer_name);
-        console.log('Book Name:', book_name);
-
-        // Create data object
-        const data = {
-            customer_name: customer_name,
-            book_name: book_name
-        };
-
-        // Log data for debugging
-        console.log('Data:', data);
-
-        // Make a POST request to loan_book endpoint
-        axios.post('http://localhost:5000/loan_book', data, {
+            // Fetch the list of all books and populate the dropdown
+            axios.get('http://localhost:5000/all_books', {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
                 }
             })
             .then(response => {
-                console.log(response.data)
-                alert(response.data);
+                const books = response.data.books;
+                const bookDropdown = document.getElementById('book_id');
+
+                books.forEach(book => {
+                    const option = document.createElement('option');
+                    option.value = book.id;
+                    option.text = book.name;
+                    bookDropdown.add(option);
+                });
             })
             .catch(error => {
-                console.error('Error loaning book:', error);
+                console.error('Error fetching books:', error);
             });
-    }
-
+        }
+    
+        // Function to loan a book
+        function loanBook() {
+            // Check if the user is logged in
+            const accessToken = sessionStorage.getItem('access_token');
+            if (!accessToken) {
+                alert('Please log in to loan a book.');
+                return;
+            }
+    
+            // Get the selected book ID from the dropdown
+            const bookId = document.getElementById('book_id').value;
+    
+            // Log selected book ID for debugging
+            console.log('Selected Book ID:', bookId);
+    
+            // Create data object
+            const data = {
+                book_id: bookId
+            };
+    
+            // Make a POST request to loan_book endpoint
+            axios.post('http://localhost:5000/loan_book', data, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                })
+                .then(response => {
+                    console.log(response.data);
+                    alert(response.data.message);
+                })
+                .catch(error => {
+                    console.error('Error loaning book:', error);
+                });
+        }
     </script>
 
 </body>
