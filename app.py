@@ -37,6 +37,7 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
+
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///library.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -54,6 +55,7 @@ class Customer(db.Model):
     age = db.Column(db.Integer, nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
+    loans = db.relationship('Loan', backref='customer', lazy=True)
 
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -61,6 +63,7 @@ class Book(db.Model):
     author = db.Column(db.String(255), nullable=False)
     year_published = db.Column(db.Integer, nullable=False)
     book_type = db.Column(db.Integer, nullable=False)
+    loans = db.relationship('Loan', backref='book', lazy=True)
 
 class Loan(db.Model):
     cust_id = db.Column(db.Integer, db.ForeignKey('customer.id'), primary_key=True)
@@ -99,6 +102,8 @@ def register():
 
     return jsonify({'message': 'Customer registered successfully'}), 201
 
+
+
 # @app.route('/login', methods=['POST'])
 # def login():
 #     data = request.get_json()
@@ -111,13 +116,19 @@ def register():
 
 #     if user and bcrypt.check_password_hash(user.password, password):
 #         # Generate an access token with an expiration time
-#         expires = timedelta(hours=1)  # Use timedelta directly
+#         expires = timedelta(hours=1)
 #         access_token = create_access_token(identity=user.id, expires_delta=expires)
 #         print(access_token)
-#         return jsonify({'access_token': access_token}), 200
+#         return jsonify({
+#             'message': 'Login successful',
+#             'user_id': user.id,
+#             'username': user.username,
+#             'access_token': access_token
+#         }), 200
 #     else:
 #         return jsonify({'message': 'Invalid username or password'}), 401
 
+# Update the login route in your app.py
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -132,15 +143,17 @@ def login():
         # Generate an access token with an expiration time
         expires = timedelta(hours=1)
         access_token = create_access_token(identity=user.id, expires_delta=expires)
-        print(access_token)
+        
         return jsonify({
             'message': 'Login successful',
             'user_id': user.id,
             'username': user.username,
+            'customer_name': user.name,  # Include the user's name in the response
             'access_token': access_token
         }), 200
     else:
         return jsonify({'message': 'Invalid username or password'}), 401
+
 
 
 
@@ -214,40 +227,71 @@ def protected():
 
 
 
+# workkkkkkkkkkkkkkkkkkkkkk
+# @app.route('/loan_book', methods=['POST'])
+# @jwt_required()
+# def loan_book():
+#     current_user_id = get_jwt_identity()
 
-# Loan a book - goodddddddddddddddddddd
+#     data = request.get_json()
+#     book_name = data.get('book_name')
+
+#     # Search for the book by name in the database
+#     book = Book.query.filter_by(name=book_name).first()
+
+#     if book:
+#         # Check if the book is already on loan
+#         existing_loan = Loan.query.filter_by(cust_id=current_user_id, book_id=book.id, return_date=None).first()
+#         if existing_loan:
+#             return jsonify({'error': 'This book is already on loan'})
+
+#         # Perform necessary operations (e.g., update database)
+#         new_loan = Loan(cust_id=current_user_id, book_id=book.id)
+#         db.session.add(new_loan)
+#         db.session.commit()
+
+#         return jsonify({'message': 'Book loaned successfully'})
+#     else:
+#         return jsonify({'error': 'Book not found'})
+
+# Loan a book
 @app.route('/loan_book', methods=['POST'])
 @jwt_required()
 def loan_book():
-    customer_name = get_jwt_identity()
+    current_user_id = get_jwt_identity()
 
-    
     data = request.get_json()
-    
-    customer_name = data.get('customer_name')
-    book_name = data.get('book_name')
-    
-    
-    print("-----------------------------------------")
+    book_id = data.get('book_id')  # Send the book ID instead of the book name
 
-    # Search for the book by name in the database
-    customer = Customer.query.filter_by(name=customer_name).first()
-    book = Book.query.filter_by(name=book_name).first()
-        
-    if customer and book:
+    # Search for the book by ID in the database
+    book = Book.query.get(book_id)
+
+    if book:
         # Check if the book is already on loan
-        existing_loan = Loan.query.filter_by(cust_id=customer.id, book_id=book.id, return_date=None).first()
+        existing_loan = Loan.query.filter_by(cust_id=current_user_id, book_id=book.id, return_date=None).first()
         if existing_loan:
             return jsonify({'error': 'This book is already on loan'})
 
         # Perform necessary operations (e.g., update database)
-        new_loan = Loan(cust_id=customer.id, book_id=book.id)
+        new_loan = Loan(cust_id=current_user_id, book_id=book.id)
         db.session.add(new_loan)
         db.session.commit()
 
         return jsonify({'message': 'Book loaned successfully'})
     else:
-        return jsonify({'error': 'Customer or Book not found'})
+        return jsonify({'error': 'Book not found'})
+
+
+# Get all books
+@app.route('/all_books', methods=['GET'])
+@jwt_required()
+def get_all_books():
+    books = Book.query.all()
+    book_list = [{'id': book.id, 'name': book.name} for book in books]
+    return jsonify({'books': book_list})
+
+
+
 
 
 
@@ -269,22 +313,48 @@ def get_loans():
     return jsonify({'loans': loan_list})
 
 
-# Return a book
+# # Return a book
+# @app.route('/return_book', methods=['POST'])
+# @jwt_required()
+# def return_book():
+#     data = request.get_json()
+
+#     customer_name_return = data.get('customer_name_return')
+#     book_name_return = data.get('book_name_return')
+
+#     # Search for customer and book by name in the database
+#     customer_return = Customer.query.filter_by(name=customer_name_return).first()
+#     book_return = Book.query.filter_by(name=book_name_return).first()
+
+#     if customer_return and book_return:
+#         # Check if the book is currently on loan to the specified customer
+#         existing_loan = Loan.query.filter_by(cust_id=customer_return.id, book_id=book_return.id, return_date=None).first()
+
+#         if existing_loan:
+#             # Perform necessary operations (e.g., update database)
+#             existing_loan.return_date = datetime.utcnow()
+#             db.session.commit()
+
+#             return jsonify({'message': 'Book returned successfully'})
+#         else:
+#             return jsonify({'error': 'This book is not currently on loan to the specified customer'})
+#     else:
+#         return jsonify({'error': 'Customer or book not found'})
+
+# Update the '/return_book' route
 @app.route('/return_book', methods=['POST'])
 @jwt_required()
 def return_book():
-    data = request.get_json()
+    data = request.form  # Use request.form to access form data
 
-    customer_name_return = data.get('customer_name_return')
-    book_name_return = data.get('book_name_return')
+    book_id_return = data.get('book_id_return')
 
-    # Search for customer and book by name in the database
-    customer_return = Customer.query.filter_by(name=customer_name_return).first()
-    book_return = Book.query.filter_by(name=book_name_return).first()
+    # Search for the book by ID in the database
+    book_return = Book.query.get(book_id_return)
 
-    if customer_return and book_return:
-        # Check if the book is currently on loan to the specified customer
-        existing_loan = Loan.query.filter_by(cust_id=customer_return.id, book_id=book_return.id, return_date=None).first()
+    if book_return:
+        # Check if the book is currently on loan
+        existing_loan = Loan.query.filter_by(book_id=book_return.id, return_date=None).first()
 
         if existing_loan:
             # Perform necessary operations (e.g., update database)
@@ -293,9 +363,11 @@ def return_book():
 
             return jsonify({'message': 'Book returned successfully'})
         else:
-            return jsonify({'error': 'This book is not currently on loan to the specified customer'})
+            return jsonify({'error': 'This book is not currently on loan'})
     else:
-        return jsonify({'error': 'Customer or book not found'})
+        return jsonify({'error': 'Book not found'})
+
+
     
     
 # Late Loans Function
@@ -359,6 +431,8 @@ def get_books():
                   'year_published': book.year_published, 'book_type': book.book_type}
                  for book in books]
     return jsonify({'books': book_list})
+
+
 
 # Find a book by name
 @app.route('/find_book', methods=['POST'])
