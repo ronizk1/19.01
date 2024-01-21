@@ -9,9 +9,9 @@
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
-<body>
+<body style="background-color: #f17193;">
     <div class="container mt-5">
-        <h2>All Loans</h2>
+        <h2 class="text-center text-black">All Loans</h2>
         <div id="welcomeMessage" style="display: none;">
             <!-- Display welcome message here -->
             <p></p>
@@ -22,9 +22,21 @@
             <!-- Your loan book form elements go here -->
         </form>
 
-        <ul id="loansList" class="list-group">
-            <!-- Loans will be dynamically added here using JavaScript -->
-        </ul>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped mt-3" style="background-color: #d8d8ab;">
+                <thead>
+                    <tr>
+                        <th scope="col">Customer Name</th>
+                        <th scope="col">Book Name</th>
+                        <th scope="col">Loan Date</th>
+                        <th scope="col">Return Date</th>
+                    </tr>
+                </thead>
+                <tbody id="loansList">
+                    <!-- Loans will be dynamically added here using JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Bootstrap JS and jQuery (required for Bootstrap) -->
@@ -64,10 +76,16 @@
                     loansList.innerHTML = '';
         
                     response.data.loans.forEach(loan => {
-                        const listItem = document.createElement('li');
-                        listItem.className = 'list-group-item';
-                        listItem.textContent = `Customer Name: ${loan.customer_name}, Book Name: ${loan.book_name}, Loan Date: ${loan.loan_date}, Return Date: ${loan.return_date || 'Not returned'}`;
-                        loansList.appendChild(listItem);
+                        const row = loansList.insertRow();
+                        const cell1 = row.insertCell(0);
+                        const cell2 = row.insertCell(1);
+                        const cell3 = row.insertCell(2);
+                        const cell4 = row.insertCell(3);
+
+                        cell1.textContent = loan.customer_name;
+                        cell2.textContent = loan.book_name;
+                        cell3.textContent = loan.loan_date;
+                        cell4.textContent = loan.return_date || 'Not returned';
                     });
                 })
                 .catch(error => {

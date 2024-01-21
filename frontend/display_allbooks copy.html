@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,18 +7,17 @@
     <!-- Bootstrap CSS -->
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
-
 <body style="background-color: #f17193;">
     <div class="container mt-5">
-        <h2 class="text-center text-white mb-4">Books List</h2>
-        <div id="booksList" class="card-columns">
+        <h2>Books List</h2>
+        <ul id="booksList" class="list-group">
             <!-- Books will be dynamically added here using JavaScript -->
-        </div>
+        </ul>
     </div>
 
     <!-- Loan Book Form -->
     <form id="booksForm" style="display: none;">
-        <!-- Your book form elements go here -->
+        <!-- Your loan book form elements go here -->
     </form>
 
     <!-- Bootstrap JS and jQuery (required for Bootstrap) -->
@@ -34,47 +32,37 @@
         const accessToken = sessionStorage.getItem('access_token');
         console.log('Access Token:', accessToken);
         if (accessToken) {
+            
             document.getElementById('booksForm').style.display = 'block';
-            getBooks(); // Fetch and display books if the user is logged in
+            getBooks(); // Fetch and display loans if the user is logged in
         }
+
 
         // Function to fetch and display books
         function getBooks() {
-            const accessToken = sessionStorage.getItem('access_token');
-
-            if (!accessToken) {
-                console.log('Access Token not found');
-                return;
-            }
-
-            axios.get('http://localhost:5000/books', {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                })
+                const accessToken = sessionStorage.getItem('access_token');
+            
+                if (!accessToken) {
+                    console.log('Access Token not found');
+                    return;
+                }
+            
+                axios.get('http://localhost:5000/books', {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    })
+    
+               
                 .then(response => {
                     const booksList = document.getElementById('booksList');
                     booksList.innerHTML = '';
 
                     response.data.books.forEach(book => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        
-                        const cardBody = document.createElement('div');
-                        cardBody.className = 'card-body';
-
-                        const cardTitle = document.createElement('h5');
-                        cardTitle.className = 'card-title';
-                        cardTitle.textContent = `${book.name}`;
-
-                        const cardText = document.createElement('p');
-                        cardText.className = 'card-text';
-                        cardText.textContent = `Author: ${book.author}, Year Published: ${book.year_published}`;
-
-                        cardBody.appendChild(cardTitle);
-                        cardBody.appendChild(cardText);
-                        card.appendChild(cardBody);
-                        booksList.appendChild(card);
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item';
+                        listItem.textContent = `${book.name} by ${book.author}, ${book.year_published}`;
+                        booksList.appendChild(listItem);
                     });
                 })
                 .catch(error => {
@@ -86,5 +74,4 @@
         document.addEventListener('DOMContentLoaded', getBooks);
     </script>
 </body>
-
 </html>

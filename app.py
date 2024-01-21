@@ -30,6 +30,10 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import requests
+from datetime import datetime, timedelta
+from icecream import ic
+
+# import traceback
 
 
 
@@ -77,6 +81,24 @@ with app.app_context():
 
 # Routes for the RESTful API
 
+def get_jerusalem_time():
+    # Set the base time in UTC
+    utc_time = datetime.utcnow()
+
+    # Check if daylight saving time is in effect (Jerusalem's daylight saving time is typically from the last Sunday in March to the last Sunday in October)
+    dst_start = datetime(utc_time.year, 3, 25)
+    dst_end = datetime(utc_time.year, 10, 25)
+
+    is_dst = dst_start <= utc_time <= dst_end
+
+    # Define the time difference for Jerusalem (UTC+2 during standard time, UTC+3 during daylight saving time)
+    jerusalem_offset = 3 if is_dst else 2
+
+    # Calculate Jerusalem time
+    jerusalem_time = utc_time + timedelta(hours=jerusalem_offset)
+
+    return jerusalem_time
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -104,6 +126,8 @@ def register():
 
 
 
+
+# # Update the login route in your app.py
 # @app.route('/login', methods=['POST'])
 # def login():
 #     data = request.get_json()
@@ -118,17 +142,18 @@ def register():
 #         # Generate an access token with an expiration time
 #         expires = timedelta(hours=1)
 #         access_token = create_access_token(identity=user.id, expires_delta=expires)
-#         print(access_token)
+        
 #         return jsonify({
 #             'message': 'Login successful',
 #             'user_id': user.id,
 #             'username': user.username,
+#             'customer_name': user.name,  # Include the user's name in the response
 #             'access_token': access_token
 #         }), 200
 #     else:
 #         return jsonify({'message': 'Invalid username or password'}), 401
 
-# Update the login route in your app.py
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -143,7 +168,10 @@ def login():
         # Generate an access token with an expiration time
         expires = timedelta(hours=1)
         access_token = create_access_token(identity=user.id, expires_delta=expires)
-        
+
+        # Use ic from icecream for logging with star emojis
+        ic('✨✨✨✨', access_token)
+
         return jsonify({
             'message': 'Login successful',
             'user_id': user.id,
@@ -157,37 +185,6 @@ def login():
 
 
 
-
-# Remaining routes for the library app (your existing code)
-
-
-
-
-
-# @app.route('/add_book', methods=['POST'])
-# @jwt_required()
-# def add_book():
-#     current_user_id = get_jwt_identity()
-    
-#     # Access the current user's information if needed
-#     current_user = Customer.query.get(current_user_id)
-#     print(f"User {current_user.username} is adding a book.")
-
-#     data = request.get_json()
-#     name = data.get('name')
-#     author = data.get('author')
-#     year_published = data.get('year_published')
-#     book_type = data.get('book_type')
-
-#     new_book = Book(name=name, author=author, year_published=year_published, book_type=book_type)
-#     db.session.add(new_book)
-#     db.session.commit()
-
-#     return jsonify({'message': 'Book added successfully'})
-
-
-
-# Add this decorator to handle both JSON and form data
 
 
 @app.route('/add_book', methods=['POST'])
@@ -213,10 +210,12 @@ def add_book():
 
         return jsonify({'message': 'Book added successfully'})
     except Exception as e:
+        
         print(f"Error adding book: {e}")
         return jsonify({'error': 'Failed to add book'}), 500
 
-# Add other routes...
+
+
 
 # Protected routes requiring JWT
 @app.route('/protected', methods=['GET'])
@@ -226,18 +225,17 @@ def protected():
     return jsonify({'message': f'Hello, User {current_user_id}!'}), 200
 
 
-
-# workkkkkkkkkkkkkkkkkkkkkk
+# # Loan a book
 # @app.route('/loan_book', methods=['POST'])
 # @jwt_required()
 # def loan_book():
 #     current_user_id = get_jwt_identity()
 
 #     data = request.get_json()
-#     book_name = data.get('book_name')
+#     book_id = data.get('book_id')  # Send the book ID instead of the book name
 
-#     # Search for the book by name in the database
-#     book = Book.query.filter_by(name=book_name).first()
+#     # Search for the book by ID in the database
+#     book = Book.query.get(book_id)
 
 #     if book:
 #         # Check if the book is already on loan
@@ -252,7 +250,6 @@ def protected():
 
 #         return jsonify({'message': 'Book loaned successfully'})
 #     else:
-#         return jsonify({'error': 'Book not found'})
 
 # Loan a book
 @app.route('/loan_book', methods=['POST'])
@@ -272,8 +269,11 @@ def loan_book():
         if existing_loan:
             return jsonify({'error': 'This book is already on loan'})
 
+        # Get Jerusalem time for loan_date
+        jerusalem_time = get_jerusalem_time()
+
         # Perform necessary operations (e.g., update database)
-        new_loan = Loan(cust_id=current_user_id, book_id=book.id)
+        new_loan = Loan(cust_id=current_user_id, book_id=book.id, loan_date=jerusalem_time)
         db.session.add(new_loan)
         db.session.commit()
 
@@ -313,22 +313,21 @@ def get_loans():
     return jsonify({'loans': loan_list})
 
 
-# # Return a book
+
+# # Update the '/return_book' route
 # @app.route('/return_book', methods=['POST'])
 # @jwt_required()
 # def return_book():
-#     data = request.get_json()
+#     data = request.form  # Use request.form to access form data
 
-#     customer_name_return = data.get('customer_name_return')
-#     book_name_return = data.get('book_name_return')
+#     book_id_return = data.get('book_id_return')
 
-#     # Search for customer and book by name in the database
-#     customer_return = Customer.query.filter_by(name=customer_name_return).first()
-#     book_return = Book.query.filter_by(name=book_name_return).first()
+#     # Search for the book by ID in the database
+#     book_return = Book.query.get(book_id_return)
 
-#     if customer_return and book_return:
-#         # Check if the book is currently on loan to the specified customer
-#         existing_loan = Loan.query.filter_by(cust_id=customer_return.id, book_id=book_return.id, return_date=None).first()
+#     if book_return:
+#         # Check if the book is currently on loan
+#         existing_loan = Loan.query.filter_by(book_id=book_return.id, return_date=None).first()
 
 #         if existing_loan:
 #             # Perform necessary operations (e.g., update database)
@@ -337,11 +336,12 @@ def get_loans():
 
 #             return jsonify({'message': 'Book returned successfully'})
 #         else:
-#             return jsonify({'error': 'This book is not currently on loan to the specified customer'})
+#             return jsonify({'error': 'This book is not currently on loan'})
 #     else:
-#         return jsonify({'error': 'Customer or book not found'})
+#         return jsonify({'error': 'Book not found'})
 
-# Update the '/return_book' route
+
+# Return a book
 @app.route('/return_book', methods=['POST'])
 @jwt_required()
 def return_book():
@@ -357,8 +357,11 @@ def return_book():
         existing_loan = Loan.query.filter_by(book_id=book_return.id, return_date=None).first()
 
         if existing_loan:
+            # Get Jerusalem time for return_date
+            jerusalem_time = get_jerusalem_time()
+
             # Perform necessary operations (e.g., update database)
-            existing_loan.return_date = datetime.utcnow()
+            existing_loan.return_date = jerusalem_time
             db.session.commit()
 
             return jsonify({'message': 'Book returned successfully'})
@@ -434,6 +437,24 @@ def get_books():
 
 
 
+# # Find a book by name
+# @app.route('/find_book', methods=['POST'])
+# @jwt_required()
+# def find_book():
+#     data = request.get_json()
+
+#     book_name = data.get('book_name')
+
+#     # Search for the book by name in the database
+#     book = Book.query.filter_by(name=book_name).first()
+
+#     if book:
+#         # Check if the book is currently on loan
+#         loan_status = get_loan_status(book.id)
+#         return jsonify({'book_name': book.name, 'author': book.author, 'loan_status': loan_status})
+#     else:
+#         return jsonify({'error': 'Book not found'})
+
 # Find a book by name
 @app.route('/find_book', methods=['POST'])
 @jwt_required()
@@ -451,6 +472,7 @@ def find_book():
         return jsonify({'book_name': book.name, 'author': book.author, 'loan_status': loan_status})
     else:
         return jsonify({'error': 'Book not found'})
+
 
 
 # Find a customer by name
